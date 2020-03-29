@@ -13,11 +13,8 @@ get_ipython().magic('reset -sf')
 
 import os
 import csv
-
 import numpy as np
 import pandas as pd
-
-from numpy import genfromtxt
 
 from sklearn.model_selection import train_test_split
 from matplotlib import pyplot as plt
@@ -34,8 +31,11 @@ from gmr import MVN, GMM, plot_error_ellipses
 
 #Use diagnostic dataset, change to false for prognostic
 prognosticSet = False #prognostic is recommended for regression
+
+fileName = 'ozonedepletor' #MLO, MLO2 or ozonedepletor (je préfère le depletor perso)
 csvDelimiter = ','
 
+#renommer les colonnes portant le même nom que d'autres
 def mangle_dupe_cols(columns):
     counts = {}
     for i, col in enumerate(columns):
@@ -46,11 +46,6 @@ def mangle_dupe_cols(columns):
     return columns
 
 def load_parse_data():
-    
-    if not prognosticSet:
-        fileName='MLO' #diagnostic
-    else:
-        fileName='wpbc' #prognostic- Outcome column: N=0, R=1 !
     datapath = os.path.join('../dataset', fileName+'_data.csv')
     headerpath = os.path.join('../dataset', fileName+'_header.csv')
     
@@ -61,7 +56,7 @@ def load_parse_data():
     return data, header
 
 ###################
-##### Main program - Tu peux déplacer ça dans jupyter notebook si tu travailles dessus
+##### Main program
 data, headers = load_parse_data()
 
 ratioTrainTest = 0.7
@@ -69,13 +64,17 @@ ratioDataset = 1 # percentage of dataset used
 
 x_train,x_test=train_test_split(data,train_size=ratioTrainTest*ratioDataset,\
                                 test_size=(1-ratioTrainTest)*ratioDataset,\
-                                random_state=int(np.random.rand()*10))
+                                random_state=int(np.random.rand()*20))
 
-#print(headers) #refer to w*bc_names.txt for details (7. Attribute information)
+print("\n\nCOLONNES DISPONIBLES:")
+print(headers, end='\n\n')
 
-
-x_col = 'decimalDate'
-y_col = 'interpolated'
+if fileName == 'MLO2' or fileName == 'MLO':
+    x_col = 'decimalDate'
+    y_col = 'interpolated'
+elif fileName == 'ozonedepletor':
+    x_col = 'date'
+    y_col = 'HFC-152a'
 
 x_tr = x_train.loc[:,x_col].astype(float)
 y_tr = x_train.loc[:,y_col].astype(float)
@@ -110,7 +109,7 @@ y_pred_train, sigma = gp.predict(x_time, return_std=True)
 plt.figure()
 #plt.plot(x, f(x), 'r:', label=r'$f(x) = x\,\sin(x)$')
 plt.plot(X, y, 'r.', markersize=10, label='Train set')
-plt.plot(x_time, y_pred_train, 'c-', label="Train Prediction")
+plt.plot(x_time, y_pred_train, 'c-', label="Regression")
 #plt.plot(x_te, y_te, 'g.', label="Test set")
 #plt.plot(x_te, y_pred, 'b-', label='Test Prediction')
 plt.fill(np.concatenate([x_time, x_time[::-1]]),
