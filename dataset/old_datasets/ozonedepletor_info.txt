@@ -1,0 +1,6 @@
+update 10/2019, S. Montzka, NOAA												
+												
+Global tropospheric mixing ratios of ozone-depleting gases (expressed as parts per trillion or pmole per mole).												
+** Global mixing ratio estimates are weighted averages of measured mixing ratios at 8 or more remote sampling locations (only 7 stations for HFC-143a, HFC-125, and HFC-32).												
+	except for CFC-11, CFC-12, CFC-113, and CCl4, which are weighted averages of results from in-situ and flask results.											
+	*calibration scale for some HFCs (-125, -143a, and -32) was adjusted in 2016 to account for new instrumental results											

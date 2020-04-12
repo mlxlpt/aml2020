@@ -1,4 +1,4 @@
-A = readmatrix('MLO_data.csv');
+A = readmatrix('./old_datasets/MLO_data.csv');
 
 A(A==-1) = NaN; % negative values are NaN according to site
 

@@ -1,0 +1,7 @@
+Shale gas is natural gas that is found trapped within shale formations. Shale gas has become an increasingly important source of natural gas in the United States since the start of this century, and interest has spread to potential gas shales in the rest of the world. In 2000 shale gas provided only 1% of U.S. natural gas production; by 2010 it was over 20% and the U.S. government's Energy Information Administration predicts that by 2035, 46% of the United States' natural gas supply will come from shale gas.
+
+This dataset shows the estimated monthly production derived from state administrative data
+
+plant values are in billion cubic feet per day
+
+source: https://www.eia.gov/naturalgas/data.php
