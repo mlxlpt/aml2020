@@ -8,6 +8,6 @@ ml_plot_data(X',options);hold on;
 colors     = hsv(params.k);
 ml_plot_centroid(Mu',colors);hold on;
 plot_gmm_contour(gca,Priors,Mu,Sigma,colors);
-grid on; box on;
+
 end
 

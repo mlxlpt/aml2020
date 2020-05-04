@@ -33,8 +33,8 @@ class_names         = [];
 colors              = [];
 title_name          = 'My pretty data';
 is_eig              = false;
-label_font_size     = 14;
-points_size         = 50;
+label_font_size     = 18;
+points_size         = 25;
 weights             = [];
 plot_labels         = [];
 cmap                = [];
@@ -91,13 +91,13 @@ hold on;
 if (is_eig)
     
     if ~isempty(labels)       
-        gplotmatrix(X,[],labels,colors,'.',10);
+        gplotmatrix(X,[],labels,'g','.',20);
 %         h = findobj('Tag','legend');
 %         fset(h, 'String',class_names);
     else
-        gplotmatrix(X,[],ones(size(X,1),1));
+        gplotmatrix(X,[],ones(size(X,1),'g','.',20));
     end
-    box on; grid on;
+    %box on; grid on;
     
 else    
     
@@ -105,9 +105,9 @@ else
         plot(X,'o');
         xlabel('x');
         if ~isempty(colors)
-            scatter(X,zeros(1,length(X)),points_size,colors(labels,:));
+            scatter(X,zeros(1,length(X)),points_size,'g');
         else
-            scatter(X,zeros(1,length(X)),points_size);
+            scatter(X,zeros(1,length(X)),points_size, 'g');
         end
     elseif D == 2
         if ~isempty(labels)
@@ -145,11 +145,11 @@ else
         
     else
         if ~isempty(labels)
-            gplotmatrix(X,[],labels,colors,'.',12);
+            gplotmatrix(X,[],labels,'g','.',20);
             h = findobj('Tag','legend');
             set(h, 'String',class_names);
         elseif ~isempty(cmap)
-            gplotmatrix(X,[],labels,cmap,'.',12);
+            gplotmatrix(X,[],labels,cmap,'g', '.',20);
         else                
             gplotmatrix(X,[],ones(size(X,1),1));
         end        
@@ -171,11 +171,11 @@ end
 % end
 
 hold off;
-box on; grid on;
+
 %% Set title 
 
 if plot_figure==false 
-    title({title_name}, 'Interpreter','Latex','FontName','Times', 'FontWeight','Light'); 
+    title({title_name}, 'FontSize',24); 
 end
 
 %% Set the labels

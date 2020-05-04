@@ -2,16 +2,16 @@ N = 30;
 
 CENTER_DATASET = false;
 
-PULSATION = 0.5;
+PULSATION = 2;
 AMPLITUDE_SINE = 1;
 PHASE = pi/2;
 
 NOISE_VAR = 0.02
 
 SINE_MIN_ARG = 0;
-SINE_MAX_ARG = 3*pi;
+SINE_MAX_ARG = 6*pi;
 
-x_min = SINE_MIN_ARG/PULSATION - 0.5;
+x_min = 0;
 x_max = SINE_MAX_ARG/PULSATION + 0.5;
 
 X = x_min + rand(N,1)*(x_max-x_min);

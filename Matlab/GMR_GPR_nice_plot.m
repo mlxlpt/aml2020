@@ -4,7 +4,7 @@ close all;
 clc;
 
 %% Loading the data
-data_to_load = "shalegas"; %"shalegas" "drawing"
+data_to_load = "genfct"; %"shalegas" "drawing" "genfct"
 
 if (strcmp(data_to_load, "shalegas"))
     data = load('../dataset/shalegas_data.csv');
@@ -29,6 +29,10 @@ elseif (strcmp(data_to_load, "drawing"))
     
     X = data(1,:)';
     Y = data(2,:)';
+elseif (strcmp(data_to_load, "genfct"))
+    data =load('genfct.csv');
+    X = data(:,1);
+    Y = data(:,2);
 end
 
 %normalising the data
@@ -57,13 +61,13 @@ end
 
 
 %% Selecting the method :
-method = "GMR"; %"GMR","GPR"
+method = "GPR"; %"GMR","GPR"
 
 %% GPR
 if strcmp(method, "GPR")
     %parameters :
-    noise_level = 0.9;
-    kernel_width = 5;
+    noise_level = 0.1;
+    kernel_width = 1;
     kernel_type = 'squaredexponential';
 
     gprMdl = fitrgp(X_train, Y_train,'FitMethod', 'none', 'BasisFunction','none',...
@@ -73,19 +77,23 @@ if strcmp(method, "GPR")
     if (size(X, 2)+size(Y, 2)<=2)
         [y_pred,~,y_int] = predict(gprMdl,x_grid');
         figure();
-        plot(X_train,Y_train,'g.');
+        plot(X_train,Y_train,'g.', 'MarkerSize', 25);
         hold on
         if(~isempty(X_test))
-            plot(X_test,Y_test,'r.');
+            plot(X_test,Y_test,'r.', 'MarkerSize', 25);
         end
         plot(x_grid,y_pred,'b');
         plot(x_grid, y_int(:,2), '--k')
         plot(x_grid, y_int(:,1), '--k')
-        xlabel('x');
-        ylabel('y');
-        legend('train data', 'test data','Fit', '95% confidence interval');
-        title(['GPR fit with kernel : ', kernel_type, ' with sigma : ', num2str(noise_level),...
-               ' and kernel width : ', num2str(kernel_width)]);
+        xlabel('x', 'FontSize',18);
+        ylabel('y', 'FontSize',18);
+        if(~isempty(X_test))
+            legend('train data', 'test data','Fit', '95% confidence interval',  'FontSize',18);
+        else
+            legend('train data', 'Fit', '95% confidence interval',  'FontSize',18);
+        end
+        title(['GPR fit with a RBF kernel with sigma : ', num2str(noise_level),...
+               ' and kernel width : ', num2str(kernel_width)], 'FontSize',24);
         hold off
     end
     GPR_loss = loss(gprMdl,X,Y);
@@ -103,29 +111,35 @@ if strcmp(method, "GMR")
 
     % Run GMM-EM function, estimates the paramaters by maximizing loglik
     [Priors, Mu, Sigma] = gmmEM(Xi, params);
-    plot_gmm(Xi, Priors, Mu, Sigma, params, 'Final Estimates for EM-GMM');
+    
     
     N = size(X,2); P = size(Y,2);
     in  = 1:N;
     out = N+1:(N+P);
     
     if (size(X, 2)+size(Y, 2)<=2)
+        plot_gmm(Xi, Priors, Mu, Sigma, params, 'Final Estimates for EM-GMM');
         [y_pred, var_est] = gmr(Priors, Mu, Sigma, x_grid, in, out);
         var_est = squeeze(var_est);
         figure();
-        plot(X_train,Y_train,'g.');
+        plot(X_train,Y_train,'g.', 'MarkerSize', 25);
         hold on
         if(~isempty(X_test))
-            %plot(X_test,Y_test,'r.');
+            plot(X_test,Y_test,'r.', 'MarkerSize', 25);
         end
-        plot(x_grid, y_pred,'b');
-        plot(x_grid, y_pred+3*var_est', '--k')
-        plot(x_grid, y_pred-3*var_est', '--k')
-        xlabel('x');
-        ylabel('y');
-        legend('train data', 'test data','Fit', '3 sigma variance');
-        title(['GMR fit with covariance : ', params.cov_type, ' with : ', num2str(params.k),...
-               ' gaussian components']);
+        plot(x_grid, y_pred,'k', 'LineWidth', 2);
+        plot(x_grid, y_pred+var_est', '--k', 'LineWidth', 3)
+        plot(x_grid, y_pred-var_est', '--k', 'LineWidth', 3)
+        xlabel('x', 'FontSize',18);
+        ylabel('y', 'FontSize',18);
+        if(~isempty(X_test))
+            l = legend('train data', 'test data','Fit', 'var estimates', 'FontSize',18);
+        else
+            l = legend('train data','Fit', 'var estimates', 'FontSize',18);
+        end
+        
+        title(['GMR fit with ', params.cov_type, ' covariance : ', 'and ' num2str(params.k),...
+               ' Gaussian components'], 'FontSize',24);
         hold off
     end
     [y_pred, var_est] = gmr(Priors, Mu, Sigma, X', in, out);
