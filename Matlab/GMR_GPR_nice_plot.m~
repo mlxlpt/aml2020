@@ -7,7 +7,7 @@ data_to_load = "genfct"; %"shalegas" "drawing" "genfct"
 crossValid = true;
 
 %% Selecting the method :
-method = "GMR"; %"GMR","GPR"
+method = "GPR"; %"GMR","GPR"
 
 if (strcmp(data_to_load, "shalegas"))
     data = load('../dataset/shalegas_data.csv');
@@ -53,9 +53,9 @@ if (size(X, 2)+size(Y, 2)<=2)
     hold on;
     if(~isempty(X_test))
         scatter(X_test, Y_test, 'r');
-        legend('Train sample','Test samples','FontSize',18);
+        legend('Train sample','Test samples');
     else
-        legend('Train sample','FontSize',18);
+        legend('Train sample');
     end
 elseif (size(X, 2)+size(Y, 2)<=3)
     figure();
@@ -64,9 +64,9 @@ elseif (size(X, 2)+size(Y, 2)<=3)
     hold on;
     if(~isempty(X_test))
         scatter3(X_test(:, 1), X_test(:, 2), Y_test, 'r');
-        legend('Train sample','Test samples','FontSize',18);
+        legend('Train sample','Test samples');
     else
-        legend('Train sample','FontSize',18);
+        legend('Train sample');
     end
 end
 
@@ -160,7 +160,7 @@ end
 if strcmp(method, "GMR") && crossValid
     % Cross-validation parameters
     valid_ratio  = 0.5;    % train/test ratio
-    k_range   = 10:13;   % range of K to evaluate
+    k_range   = 5:15;   % range of K to evaluate
     F_fold    = 10;     % # of Folds for cv
 
     % Compute F-fold cross-validation
@@ -168,25 +168,39 @@ if strcmp(method, "GMR") && crossValid
 
     plot_gmr_cross_validation(metrics, k_range)
     
-elseif strcmp(method, "GPR") && crossValid
-    %paramsM.kernel_width = 1.0;
-    %paramsM.noise_level = [0.01,0.1,0.5,1.0];
-    paramsM.noise_level = 0.1;
-    paramsM.noiseCV = false; % ne pas changer, en test
-    paramsM.kernel_width = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0];
-    paramsM.kernel_type = 'squaredexponential';
-    paramsM.useLogScale = true;
-    
+else
+    useLogScale = true;
     F_fold    = 10;     % # of Folds for cv
     valid_ratio  = 0.5;    % train/test ratio
 
-    % plot inside
-    metrics = cross_validation_gpr( X', Y', F_fold, valid_ratio, paramsM ); 
+    paramsM.noise_level = 0.1;
+    paramsM.kernel_width = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0];
+    paramsM.kernel_type = 'squaredexponential';
+    
+    metrics = cross_validation_gpr( X', Y', F_fold, valid_ratio, paramsM );    
+    f = figure();
+    [ax,hline1,hline2]=plotyy(paramsM.kernel_width',metrics.mean_MSE',...
+        [paramsM.kernel_width' paramsM.kernel_width'],[metrics.mean_NMSE' metrics.mean_R2']);
+    delete(hline1);
+    delete(hline2);
+    hold(ax(1),'on');
+    errorbar(ax(1),paramsM.kernel_width', metrics.mean_MSE', metrics.std_MSE','--o','LineWidth',2,'Color', [0 0.447 0.741]);
+    hold(ax(2),'on');
+    errorbar(ax(2),paramsM.kernel_width',metrics.mean_NMSE', metrics.std_NMSE','--or','LineWidth',2);
+    errorbar(ax(2),paramsM.kernel_width',metrics.mean_R2', metrics.std_R2','--og','LineWidth',2);
+    if(useLogScale)
+        set(ax,'XScale','log');
+        xlabel('Kernerl width, log scale');
+    else
+        xlabel('Kernerl width');
+    end
+    ylabel('Measures');
+    legend('MSE', 'NMSE', '$R^2$','Interpreter','latex','FontSize',14);
+    grid on;
+    title('GPR Regression Metrics');
+    
 end
 
-% pour tester la qualité de la prédiction avec un testing set sans faire de
-% cross validation
-if(~isempty(X_test)) 
-    MSE, NMSE, R2 = regression_metrics(Y_test_est,Y_test);
-    fprintf('RSQUARED = %.5f\n', R2);
+if(~isempty(X_test))
+    MSE, NMSE, R2 = regression_metrics(Y_test_est,Y_test); 
 end

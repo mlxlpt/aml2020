@@ -5,8 +5,8 @@ function [] = plot_gmr_cross_validation(metrics, k_range)
 figure;
 
 subplot(1,2,1)
-errorbar(k_range',metrics.mean_AIC(k_range)', metrics.std_AIC(k_range)','--or','LineWidth',2); hold on;
-errorbar(k_range',metrics.mean_BIC(k_range)', metrics.std_BIC(k_range)','--ob','LineWidth',2);
+errorbar(k_range',metrics.mean_AIC', metrics.std_AIC','--or','LineWidth',2); hold on;
+errorbar(k_range',metrics.mean_BIC', metrics.std_BIC','--ob','LineWidth',2);
 grid on
 xlabel('Number of K components'); ylabel('AIC/BIC Score')
 legend('AIC', 'BIC')
@@ -14,16 +14,16 @@ title('GMM Model Selection Metrics')
 
 %% Plot Regression Metrics for F-fold cross-validation with std
 subplot(1,2,2)
-[ax,hline1,hline2]=plotyy(k_range',metrics.mean_MSE(k_range)',[k_range' k_range'],[metrics.mean_NMSE(k_range)' metrics.mean_R2(k_range)']);
+[ax,hline1,hline2]=plotyy(k_range',metrics.mean_MSE',[k_range' k_range'],[metrics.mean_NMSE' metrics.mean_R2']);
 delete(hline1);
 delete(hline2);
 hold(ax(1),'on');
-errorbar(ax(1),k_range', metrics.mean_MSE(k_range)', metrics.std_MSE(k_range)','--o','LineWidth',2,'Color', [0 0.447 0.741]);
+errorbar(ax(1),k_range', metrics.mean_MSE', metrics.std_MSE','--o','LineWidth',2,'Color', [0 0.447 0.741]);
 hold(ax(2),'on');
-errorbar(ax(2),k_range',metrics.mean_NMSE(k_range)', metrics.std_NMSE(k_range)','--or','LineWidth',2);
-errorbar(ax(2),k_range',metrics.mean_R2(k_range)', metrics.std_R2(k_range)','--og','LineWidth',2);
+errorbar(ax(2),k_range',metrics.mean_NMSE', metrics.std_NMSE','--or','LineWidth',2);
+errorbar(ax(2),k_range',metrics.mean_R2', metrics.std_R2','--og','LineWidth',2);
 xlabel('Number of K components'); ylabel('Measures')
-legend('MSE', 'NMSE', 'Rsquared')
+legend('MSE', 'NMSE', '$R^2$','Interpreter','Latex','FontSize',14)
 grid on
 title('Regression Metrics')
 end
