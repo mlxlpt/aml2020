@@ -7,7 +7,7 @@ data_to_load = "genfct"; %"shalegas" "drawing" "genfct"
 crossValid = true;
 
 %% Selecting the method :
-method = "GMR"; %"GMR","GPR"
+method = "GPR"; %"GMR","GPR"
 
 if (strcmp(data_to_load, "shalegas"))
     data = load('../dataset/shalegas_data.csv');
@@ -47,26 +47,26 @@ validSize = 0.0;
 
 if (size(X, 2)+size(Y, 2)<=2)
     figure();
-    title('Data');
+    title('Data','FontSize',20);
     x_grid = [min(X)-1:0.1:max(X)+1];
     scatter(X_train, Y_train, 'g');
     hold on;
     if(~isempty(X_test))
         scatter(X_test, Y_test, 'r');
-        legend('Train sample','Test samples','FontSize',18);
+        legend('Train data','Test data','FontSize',16);
     else
-        legend('Train sample','FontSize',18);
+        legend('Train data','FontSize',16);
     end
 elseif (size(X, 2)+size(Y, 2)<=3)
     figure();
-    title('Data');
+    title('Data','FontSize',20);
     scatter3(X_train(:, 1), X_train(:, 2), Y_train, 'g');
     hold on;
     if(~isempty(X_test))
         scatter3(X_test(:, 1), X_test(:, 2), Y_test, 'r');
-        legend('Train sample','Test samples','FontSize',18);
+        legend('Train data','Test data','FontSize',16);
     else
-        legend('Train sample','FontSize',18);
+        legend('Train data','FontSize',16);
     end
 end
 
@@ -87,7 +87,7 @@ if strcmp(method, "GPR")
         plot(X_train,Y_train,'g.', 'MarkerSize', 25);
         hold on
         if(~isempty(X_test))
-            plot(X_test,Y_test,'r.', 'MarkerSize', 25);
+            plot(X_test,Y_test,'c.', 'MarkerSize', 25);
         end
         plot(x_grid,y_pred,'b');
         plot(x_grid, y_int(:,2), '--k')
@@ -95,12 +95,12 @@ if strcmp(method, "GPR")
         xlabel('x', 'FontSize',18);
         ylabel('y', 'FontSize',18);
         if(~isempty(X_test))
-            legend('train data', 'test data','Fit', '95% confidence interval',  'FontSize',18);
+            legend('train data', 'test data','Fit', '95% confidence interval',  'FontSize',16);
         else
-            legend('train data', 'Fit', '95% confidence interval',  'FontSize',18);
+            legend('train data', 'Fit', '95% confidence interval',  'FontSize',16);
         end
-        title(['GPR fit with a RBF kernel with sigma : ', num2str(noise_level),...
-               ' and kernel width : ', num2str(kernel_width)], 'FontSize',24);
+        title(['GPR - RBF kernel with $\sigma$ = ', num2str(noise_level),...
+               ' and $l$ = ', num2str(kernel_width)], 'FontSize',20, 'Interpreter', 'latex');
         hold off
     end
     GPR_loss = loss(gprMdl,X,Y);
@@ -145,8 +145,8 @@ if strcmp(method, "GMR")
             l = legend('train data','Fit', 'var estimates', 'FontSize',18);
         end
         
-        title(['GMR fit with ', params.cov_type, ' covariance : ', 'and ' num2str(params.k),...
-               ' Gaussian components'], 'FontSize',24);
+        title(['GMR - $ ', params.cov_type, ' covariance - ', 'and ' num2str(params.k),...
+               ' components'], 'FontSize',20,'Interpreter', 'latex')
         hold off
     end
     [y_pred, var_est] = gmr(Priors, Mu, Sigma, X', in, out);

@@ -87,9 +87,7 @@ if params.noiseCV == false
     f = figure();
     
     subplot(1,2,1)
-    %errorbar(params.kernel_width',metrics.loglik', metrics.loglikstd','--or','LineWidth',2); hold on;
-    plot(params.kernel_width',metrics.loglik','--or','LineWidth',2); hold on;
-
+    errorbar(params.kernel_width',metrics.loglik', metrics.loglikstd','--or','LineWidth',2); hold on;
     %errorbar(params.kernel_width',metrics.mean_BIC', metrics.std_BIC','--ob','LineWidth',2);
     grid on
     xlabel('Kernel width');% ylabel('Marginal loglik')
@@ -97,7 +95,6 @@ if params.noiseCV == false
     title('Marginal likelihood');
     if(params.useLogScale)
         set(gca, 'XScale','log')
-        set(gca,'FontSize',16)
     end
     subplot(1,2,2)
     [ax,hline1,hline2]=plotyy(params.kernel_width',metrics.mean_MSE',...
@@ -111,7 +108,6 @@ if params.noiseCV == false
     errorbar(ax(2),params.kernel_width',metrics.mean_R2', metrics.std_R2','--og','LineWidth',2);
     if(params.useLogScale)
         set(ax,'XScale','log');
-        set(ax,'FontSize',16)
         xlabel('Kernerl width, log scale');
     else
         xlabel('Kernerl width');
