@@ -1,9 +1,10 @@
 %% Initialisation
 clear all; close all; clc;
+restoredefaultpath();
 addpath(genpath('./utils')); addpath(genpath('./plot_functions'));
 
 %% Loading the data
-data_to_load = "genfct"; %"shalegas" "drawing" "genfct"
+data_to_load = "kin8nm"; %"shalegas" "drawing" "genfct" "kin8nm" <- REAL DATASET
 crossValid = true;
 
 %% Selecting the method :
@@ -25,13 +26,19 @@ if (strcmp(data_to_load, "shalegas"))
     end
     X = data(:, X_index);
     Y = data(:, Y_index);
-elseif (strcmp(data_to_load, "drawing")) 
+elseif (strcmp(data_to_load, "drawing"))
     limits = [-50 50 -50 50];
     data = ml_generate_mouse_data(limits, 'labels');
     close;
     
     X = data(1,:)';
     Y = data(2,:)';
+elseif(strcmp(data_to_load, "kin8nm"))
+    T = readtable('../dataset/kin8nm.csv', 'HeaderLines',0); 
+    M=table2array(T);
+    M=M(:,:);
+    X=M(:,[1:8]); % X: theta i=1..8 joint pos
+    Y=M(:,9); %y is column 9
 elseif (strcmp(data_to_load, "genfct"))
     data =load('genfct.csv');
     X = data(:,1);
@@ -41,7 +48,7 @@ end
 %normalising the data
 Y = Y - mean(Y);
 
-validSize = 0.0;
+validSize = 0.3; % test/target ratio (inverse than usual)
 [X_train, Y_train, X_test, Y_test] = split_data(X, Y, validSize);
 
 
@@ -153,15 +160,15 @@ if strcmp(method, "GMR")
     GMR_loss = 1/length(y_pred)*norm(y_pred-Y, 2);
 
     [AIC, BIC] = gmm_metrics(Xi,Priors,Mu,Sigma,params.cov_type);
-   
+    fprintf("GMR OK\n");
 end
 %% 
 
 if strcmp(method, "GMR") && crossValid
     % Cross-validation parameters
     valid_ratio  = 0.5;    % train/test ratio
-    k_range   = 10:13;   % range of K to evaluate
-    F_fold    = 10;     % # of Folds for cv
+    k_range   = 5:20;   % range of K to evaluate
+    F_fold    = 8;     % # of Folds for cv
 
     % Compute F-fold cross-validation
     [metrics] = cross_validation_gmr(X', Y', F_fold, valid_ratio, k_range, params);
@@ -173,20 +180,25 @@ elseif strcmp(method, "GPR") && crossValid
     %paramsM.noise_level = [0.01,0.1,0.5,1.0];
     paramsM.noise_level = 0.1;
     paramsM.noiseCV = false; % ne pas changer, en test
-    paramsM.kernel_width = [0.1, 0.5, 1.0, 2.0, 5.0, 10.0];
+    paramsM.kernel_width = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5];
     paramsM.kernel_type = 'squaredexponential';
-    paramsM.useLogScale = true;
+    paramsM.useLogScale = false;
     
     F_fold    = 10;     % # of Folds for cv
     valid_ratio  = 0.5;    % train/test ratio
 
     % plot inside
-    metrics = cross_validation_gpr( X', Y', F_fold, valid_ratio, paramsM ); 
+    metrics = cross_validation_gpr( X', Y', F_fold, valid_ratio, paramsM , true); 
 end
 
 % pour tester la qualité de la prédiction avec un testing set sans faire de
 % cross validation
 if(~isempty(X_test)) 
-    MSE, NMSE, R2 = regression_metrics(Y_test_est,Y_test);
+    if strcmp(method, "GMR")
+        [Y_test_est, ~] = gmr(Priors, Mu, Sigma, X_test, in, out);
+    elseif strcmp(method, "GPR")
+        Y_test_est = predict(gprMdl, X_test);
+    end
+    [MSE, NMSE, R2] = regression_metrics(Y_test_est',Y_test');
     fprintf('RSQUARED = %.5f\n', R2);
 end

@@ -3,11 +3,11 @@ clear all; close all; clc;
 addpath(genpath('./utils')); addpath(genpath('./plot_functions'));
 
 %% Loading the data
-data_to_load = "genfct"; %"shalegas" "drawing" "genfct"
+data_to_load = "kin8nm"; %"shalegas" "drawing" "genfct" "kin8nm" <- REAL DATASET
 crossValid = true;
 
 %% Selecting the method :
-method = "GPR"; %"GMR","GPR"
+method = "GMR"; %"GMR","GPR"
 
 if (strcmp(data_to_load, "shalegas"))
     data = load('../dataset/shalegas_data.csv');
@@ -25,13 +25,19 @@ if (strcmp(data_to_load, "shalegas"))
     end
     X = data(:, X_index);
     Y = data(:, Y_index);
-elseif (strcmp(data_to_load, "drawing")) 
+elseif (strcmp(data_to_load, "drawing"))
     limits = [-50 50 -50 50];
     data = ml_generate_mouse_data(limits, 'labels');
     close;
     
     X = data(1,:)';
     Y = data(2,:)';
+elseif(strcmp(data_to_load, "kin8nm"))
+    T = readtable('../dataset/kin8nm.csv', 'HeaderLines',0); 
+    M=table2array(T);
+    M=M(:,:);
+    X=M(:,[1:8]); % X: theta i=1..8 joint pos
+    Y=M(:,9); %y is column 9
 elseif (strcmp(data_to_load, "genfct"))
     data =load('genfct.csv');
     X = data(:,1);
@@ -41,7 +47,7 @@ end
 %normalising the data
 Y = Y - mean(Y);
 
-validSize = 0.0;
+validSize = 0.3; % test/target ratio (inverse than usual)
 [X_train, Y_train, X_test, Y_test] = split_data(X, Y, validSize);
 
 
@@ -59,14 +65,14 @@ if (size(X, 2)+size(Y, 2)<=2)
     end
 elseif (size(X, 2)+size(Y, 2)<=3)
     figure();
-    title('Data','FontSize',16);
+    title('Data','FontSize',20);
     scatter3(X_train(:, 1), X_train(:, 2), Y_train, 'g');
     hold on;
     if(~isempty(X_test))
         scatter3(X_test(:, 1), X_test(:, 2), Y_test, 'r');
-        legend('Train sample','Test samples','FontSize',18);
+        legend('Train data','Test data','FontSize',16);
     else
-        legend('Train sample','FontSize',18);
+        legend('Train data','FontSize',16);
     end
 end
 
@@ -87,7 +93,7 @@ if strcmp(method, "GPR")
         plot(X_train,Y_train,'g.', 'MarkerSize', 25);
         hold on
         if(~isempty(X_test))
-            plot(X_test,Y_test,'r.', 'MarkerSize', 25);
+            plot(X_test,Y_test,'c.', 'MarkerSize', 25);
         end
         plot(x_grid,y_pred,'b');
         plot(x_grid, y_int(:,2), '--k')
@@ -160,8 +166,8 @@ end
 if strcmp(method, "GMR") && crossValid
     % Cross-validation parameters
     valid_ratio  = 0.5;    % train/test ratio
-    k_range   = 10:13;   % range of K to evaluate
-    F_fold    = 10;     % # of Folds for cv
+    k_range   = 5:13;   % range of K to evaluate
+    F_fold    = 8;     % # of Folds for cv
 
     % Compute F-fold cross-validation
     [metrics] = cross_validation_gmr(X', Y', F_fold, valid_ratio, k_range, params);
@@ -181,12 +187,17 @@ elseif strcmp(method, "GPR") && crossValid
     valid_ratio  = 0.5;    % train/test ratio
 
     % plot inside
-    metrics = cross_validation_gpr( X', Y', F_fold, valid_ratio, paramsM ); 
+    metrics = cross_validation_gpr( X', Y', F_fold, valid_ratio, paramsM , false); 
 end
 
 % pour tester la qualité de la prédiction avec un testing set sans faire de
 % cross validation
 if(~isempty(X_test)) 
-    MSE, NMSE, R2 = regression_metrics(Y_test_est,Y_test);
+    if strcmp(method, "GMR")
+        [Y_test_est, ~] = gmr(Priors, Mu, Sigma, X_test, in, out);
+    elseif strcmp(method, "GPR")
+        Y_test_est = predict(gprMdl, X_test);
+    end
+    [MSE, NMSE, R2] = regression_metrics(Y_test_est',Y_test');
     fprintf('RSQUARED = %.5f\n', R2);
 end

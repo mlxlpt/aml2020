@@ -1,4 +1,4 @@
-function [metrics] = cross_validation_gpr( X, y, F_fold, valid_ratio, params )
+function [metrics] = cross_validation_gpr( X, y, F_fold, valid_ratio, params, plotLogLik)
 %CROSS_VALIDATION_GMR Implementation of F-fold cross-validation for regression algorithm.
 %
 %   input -----------------------------------------------------------------
@@ -31,17 +31,12 @@ function [metrics] = cross_validation_gpr( X, y, F_fold, valid_ratio, params )
 metrics.mean_MSE = zeros(1, length(params.kernel_width));
 metrics.mean_NMSE = metrics.mean_MSE;
 metrics.mean_R2 = metrics.mean_MSE;
-metrics.mean_AIC = metrics.mean_MSE;
-metrics.mean_BIC = metrics.mean_MSE;
 metrics.std_MSE = metrics.mean_MSE;
 metrics.std_NMSE = metrics.mean_MSE;
 metrics.std_R2 = metrics.mean_MSE;
-metrics.std_AIC = metrics.mean_MSE;
-metrics.std_BIC = metrics.mean_MSE;
 metrics.loglik = metrics.mean_MSE;
-metrics.loglikstd = metrics.mean_MSE;
 
-sd_folds = zeros(5, F_fold);
+sd_folds = zeros(4, F_fold);
 
 kernel_type = params.kernel_type;
 noise_level = params.noise_level;
@@ -64,42 +59,37 @@ if params.noiseCV == false
             fprintf('.');
         end
         kfcn = gprMdl.Impl.Kernel.makeKernelAsFunctionOfXNXM(gprMdl.Impl.ThetaHat);
-        K_sig = kfcn(X',X') + eye(size(X,2));
-        %K_sig(K_sig <= 1e-2) = 0;
-        sd_folds(4,1) = 0.5*(y*inv(K_sig)*y'+log(det(K_sig)));
+        K_sig = kfcn(X_train',X_train') + eye(size(X_train,2));
+        sd_folds(4,1) = 0.5*(Y_train*inv(K_sig)*Y_train'+log(det(K_sig)));
 
         metrics.mean_MSE(k) = mean(sd_folds(1,:));
         metrics.mean_NMSE(k) = mean(sd_folds(2,:));
         metrics.mean_R2(k) = mean(sd_folds(3,:));
-        metrics.mean_AIC(k) = NaN; % on met NaN comme ça le plot AIC BIC reste vide (n'existe pas pour GMR/GPR)
-        metrics.mean_BIC(k) = NaN;
         metrics.std_MSE(k) = std(sd_folds(1,:));
         metrics.std_NMSE(k) = std(sd_folds(2,:));
         metrics.std_R2(k) = std(sd_folds(3,:));
-        metrics.std_AIC(k) = NaN;
-        metrics.std_BIC(k) = NaN;
         metrics.loglik(k) = sd_folds(4,1);
-        metrics.loglikstd(k) = 0;
 
         k = k + 1;
     end
     fprintf('\n');
     f = figure();
-    
-    subplot(1,2,1)
-    %errorbar(params.kernel_width',metrics.loglik', metrics.loglikstd','--or','LineWidth',2); hold on;
-    plot(params.kernel_width',metrics.loglik','--or','LineWidth',2); hold on;
+    if plotLogLik
+        subplot(1,2,1)
+        %errorbar(params.kernel_width',metrics.loglik', metrics.loglikstd','--or','LineWidth',2); hold on;
+        plot(params.kernel_width',metrics.loglik','--or','LineWidth',2); hold on;
 
-    %errorbar(params.kernel_width',metrics.mean_BIC', metrics.std_BIC','--ob','LineWidth',2);
-    grid on
-    xlabel('Kernel width');% ylabel('Marginal loglik')
-    legend('Marginal loglik', 'FontSize',18);
-    title('Marginal likelihood');
-    if(params.useLogScale)
-        set(gca, 'XScale','log')
-        set(gca,'FontSize',16)
+        %errorbar(params.kernel_width',metrics.mean_BIC', metrics.std_BIC','--ob','LineWidth',2);
+        grid on
+        xlabel('Kernel width');% ylabel('Marginal loglik')
+        legend('Marginal loglik', 'FontSize',16);
+        title('Marginal likelihood','FontSize',20);
+        if(params.useLogScale)
+            set(gca, 'XScale','log')
+            set(gca,'FontSize',16)
+        end
+        subplot(1,2,2)
     end
-    subplot(1,2,2)
     [ax,hline1,hline2]=plotyy(params.kernel_width',metrics.mean_MSE',...
         [params.kernel_width' params.kernel_width'],[metrics.mean_NMSE' metrics.mean_R2']);
     delete(hline1);
@@ -114,12 +104,12 @@ if params.noiseCV == false
         set(ax,'FontSize',16)
         xlabel('Kernerl width, log scale');
     else
-        xlabel('Kernerl width');
+        xlabel('Kernel width');
     end
-    ylabel('Measures');
+    ylabel('Measures','FontSize',16);
     legend('MSE', 'NMSE', '$R^2$','Interpreter','latex','FontSize',18);
     grid on;
-    title('GPR Regression Metrics');
+    title('GPR Regression Metrics','FontSize',20);
 else
     if length(params.kernel_width) > 1
         error("Too many kernel width given, expected one but got more");
