@@ -1,15 +1,16 @@
-%% Initialisation
-clear all; close all; clc;
 restoredefaultpath();
 addpath(genpath('./utils')); addpath(genpath('./plot_functions'));
-
-%% Loading the data
-data_to_load = "kin8nm"; %"shalegas" "drawing" "genfct" "kin8nm" <- REAL DATASET
+% Initialisation
+clear all; close all; clc;
+rndonce = true;
+%%
+% Loading the data
+data_to_load = "genfct"; %"shalegas" "drawing" "genfct" "kin8nm" <- REAL DATASET
 crossValid = true;
 
-%% Selecting the method :
+% Selecting the method :
 method = "GPR"; %"GMR","GPR"
-
+%%
 if (strcmp(data_to_load, "shalegas"))
     data = load('../dataset/shalegas_data.csv');
     fid = fopen('../dataset/shalegas_header.csv');
@@ -46,17 +47,34 @@ elseif (strcmp(data_to_load, "genfct"))
 end
 
 %normalising the data
-Y = Y - mean(Y);
+%X = (X - mean(X,1))./std(X,1);
+%Y = (Y - mean(Y,1));%./std(Y,1);
 
-validSize = 0.3; % test/target ratio (inverse than usual)
+validSize = 0.5; % test/target ratio (inverse than usual)
 [X_train, Y_train, X_test, Y_test] = split_data(X, Y, validSize);
 
-
+% make gap in data
+% [X_train,I]=sort(X_train);
+% Y_train= Y_train(I);
+% Y_train((10 > X_train) & (X_train > 0)) = [];
+% X_train((10 > X_train) & (X_train > 0)) = [];
+if rndonce %sparsity tests
+    I = rand(size(X_train,1),1);
+    X_train(I > 0.07) = [];
+    Y_train(I > 0.07) = [];
+    
+    J = rand(size(X_test,1),1);
+    X_test(J > 0.5) = [];
+    Y_test(J > 0.5) = [];
+    
+    rndonce = false;
+end
+%%
 if (size(X, 2)+size(Y, 2)<=2)
     figure();
     title('Data','FontSize',20);
     x_grid = [min(X)-1:0.1:max(X)+1];
-    scatter(X_train, Y_train, 'g');
+    scatter(X_train, Y_train, 'black');
     hold on;
     if(~isempty(X_test))
         scatter(X_test, Y_test, 'r');
@@ -77,11 +95,25 @@ elseif (size(X, 2)+size(Y, 2)<=3)
     end
 end
 
-%% GPR
+if strcmp(method, "GMR")
+    Xi = [X_train, Y_train]';
+    params.cov_type = 'full';
+    params.k = 7;
+    params.max_iter_init = 150;
+    params.max_iter = 500;
+    params.d_type = 'L2';
+    params.init = 'plus';
+    
+    N = size(X,2); P = size(Y,2); 
+    in  = 1:N;
+    out = N+1:(N+P);
+end
+
+% GPR
 if strcmp(method, "GPR")
     %parameters :
     noise_level = 0.1;
-    kernel_width = 1;
+    kernel_width = 2;
     kernel_type = 'squaredexponential';
 
     gprMdl = fitrgp(X_train, Y_train,'FitMethod', 'none', 'BasisFunction','none',...
@@ -91,18 +123,20 @@ if strcmp(method, "GPR")
     if (size(X, 2)+size(Y, 2)<=2)
         [y_pred,~,y_int] = predict(gprMdl,x_grid');
         figure();
-        plot(X_train,Y_train,'g.', 'MarkerSize', 25);
-        hold on
         if(~isempty(X_test))
-            plot(X_test,Y_test,'c.', 'MarkerSize', 25);
+            plot1 = plot(X_test,Y_test,'.r' ,'MarkerSize', 18);
+            %plot1.Color(1) = 0.75;
+            hold on;
         end
-        plot(x_grid,y_pred,'b');
-        plot(x_grid, y_int(:,2), '--k')
-        plot(x_grid, y_int(:,1), '--k')
+        plot(X_train,Y_train,'.','color',[0,0,0]+0.5 ,'MarkerSize', 18);
+        hold on;
+        plot(x_grid,y_pred,'b','Linewidth',2);
+        plot(x_grid, y_int(:,2), '--k','Linewidth',2)
+        plot(x_grid, y_int(:,1), '--k','Linewidth',2)
         xlabel('x', 'FontSize',18);
         ylabel('y', 'FontSize',18);
         if(~isempty(X_test))
-            legend('train data', 'test data','Fit', '95% confidence interval',  'FontSize',16);
+            legend('test data', 'train data','Fit', '95% confidence interval',  'FontSize',16);
         else
             legend('train data', 'Fit', '95% confidence interval',  'FontSize',16);
         end
@@ -113,46 +147,47 @@ if strcmp(method, "GPR")
     GPR_loss = loss(gprMdl,X,Y);
 end
 
-%% GMR
+% GMR
 if strcmp(method, "GMR")
     Xi = [X_train, Y_train]';
     params.cov_type = 'full';
-    params.k = 7;
+    params.k = 10;
     params.max_iter_init = 100;
     params.max_iter = 500;
     params.d_type = 'L2';
     params.init = 'plus';
-
-    % Run GMM-EM function, estimates the paramaters by maximizing loglik
-    [Priors, Mu, Sigma] = gmmEM(Xi, params);
-    
     
     N = size(X,2); P = size(Y,2); 
     in  = 1:N;
     out = N+1:(N+P);
+
+    % Run GMM-EM function, estimates the paramaters by maximizing loglik
+    [Priors, Mu, Sigma] = gmmEM(Xi, params);
     
     if (size(X, 2)+size(Y, 2)<=2)
         plot_gmm(Xi, Priors, Mu, Sigma, params, 'Final Estimates for EM-GMM');
         [y_pred, var_est] = gmr(Priors, Mu, Sigma, x_grid, in, out);
         var_est = squeeze(var_est);
         figure();
-        plot(X_train,Y_train,'g.', 'MarkerSize', 25);
-        hold on
         if(~isempty(X_test))
-            plot(X_test,Y_test,'r.', 'MarkerSize', 25);
+            plot1 = plot(X_test,Y_test,'r.', 'MarkerSize', 25);
+            plot1.Color(1) = 1.0;
+            hold on;
         end
-        plot(x_grid, y_pred,'k', 'LineWidth', 2);
-        plot(x_grid, y_pred+var_est', '--k', 'LineWidth', 3)
-        plot(x_grid, y_pred-var_est', '--k', 'LineWidth', 3)
+        plot(X_train,Y_train,'.','color',[0, 0, 0]+0.5, 'MarkerSize', 25);
+        hold on;
+        plot(x_grid, y_pred,'b', 'LineWidth', 2.5);
+        plot(x_grid, y_pred+var_est', '--k', 'LineWidth', 2)
+        plot(x_grid, y_pred-var_est', '--k', 'LineWidth', 2)
         xlabel('x', 'FontSize',18);
         ylabel('y', 'FontSize',18);
         if(~isempty(X_test))
-            l = legend('train data', 'test data','Fit', 'var estimates', 'FontSize',18);
+            l = legend('test data', 'train data','Fit', 'var estimates', 'FontSize',18);
         else
             l = legend('train data','Fit', 'var estimates', 'FontSize',18);
         end
         
-        title(['GMR - $ ', params.cov_type, ' covariance - ', 'and ' num2str(params.k),...
+        title(['GMR - ', params.cov_type, ' covariance - ', 'and ' num2str(params.k),...
                ' components'], 'FontSize',20,'Interpreter', 'latex')
         hold off
     end
@@ -167,7 +202,7 @@ end
 if strcmp(method, "GMR") && crossValid
     % Cross-validation parameters
     valid_ratio  = 0.5;    % train/test ratio
-    k_range   = 5:20;   % range of K to evaluate
+    k_range   = [1.0,2.0,3.0];   % range of K to evaluate
     F_fold    = 8;     % # of Folds for cv
 
     % Compute F-fold cross-validation
@@ -178,9 +213,9 @@ if strcmp(method, "GMR") && crossValid
 elseif strcmp(method, "GPR") && crossValid
     %paramsM.kernel_width = 1.0;
     %paramsM.noise_level = [0.01,0.1,0.5,1.0];
-    paramsM.noise_level = 0.1;
+    paramsM.noise_level = 0.05;
     paramsM.noiseCV = false; % ne pas changer, en test
-    paramsM.kernel_width = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5];
+    paramsM.kernel_width = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25];
     paramsM.kernel_type = 'squaredexponential';
     paramsM.useLogScale = false;
     
