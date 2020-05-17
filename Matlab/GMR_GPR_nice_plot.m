@@ -1,15 +1,15 @@
 restoredefaultpath();
 addpath(genpath('./utils')); addpath(genpath('./plot_functions'));
-% Initialisation
 clear all; close all; clc;
-rndonce = true;
-%%
+%% Initialisation
 % Loading the data
 data_to_load = "genfct"; %"shalegas" "drawing" "genfct" "kin8nm" <- REAL DATASET
 crossValid = true;
+genSparseData = false;
+createGapData = false;
 
 % Selecting the method :
-method = "GPR"; %"GMR","GPR"
+method = "GMR"; %"GMR","GPR"
 %%
 if (strcmp(data_to_load, "shalegas"))
     data = load('../dataset/shalegas_data.csv');
@@ -48,26 +48,24 @@ end
 
 %normalising the data
 %X = (X - mean(X,1))./std(X,1);
-%Y = (Y - mean(Y,1));%./std(Y,1);
+Y = (Y - mean(Y,1));%./std(Y,1);
 
 validSize = 0.5; % test/target ratio (inverse than usual)
 [X_train, Y_train, X_test, Y_test] = split_data(X, Y, validSize);
 
-% make gap in data
-% [X_train,I]=sort(X_train);
-% Y_train= Y_train(I);
-% Y_train((10 > X_train) & (X_train > 0)) = [];
-% X_train((10 > X_train) & (X_train > 0)) = [];
-if rndonce %sparsity tests
+if createGapData% make gap in data
+    [X_train,I]=sort(X_train);
+    Y_train= Y_train(I);
+    Y_train((10 > X_train) & (X_train > 0)) = [];
+    Y_train((10 > X_train) & (X_train > 0)) = [];
+end
+if genSparseData %generate sparsity
     I = rand(size(X_train,1),1);
     X_train(I > 0.07) = [];
     Y_train(I > 0.07) = [];
-    
     J = rand(size(X_test,1),1);
     X_test(J > 0.5) = [];
     Y_test(J > 0.5) = [];
-    
-    rndonce = false;
 end
 %%
 if (size(X, 2)+size(Y, 2)<=2)
@@ -113,7 +111,7 @@ end
 if strcmp(method, "GPR")
     %parameters :
     noise_level = 0.1;
-    kernel_width = 2;
+    kernel_width = 1;
     kernel_type = 'squaredexponential';
 
     gprMdl = fitrgp(X_train, Y_train,'FitMethod', 'none', 'BasisFunction','none',...
@@ -226,11 +224,12 @@ elseif strcmp(method, "GPR") && crossValid
     metrics = cross_validation_gpr( X', Y', F_fold, valid_ratio, paramsM , true); 
 end
 
-% pour tester la qualité de la prédiction avec un testing set sans faire de
+%% pour tester la qualité de la prédiction avec un testing set sans faire de
 % cross validation
 if(~isempty(X_test)) 
     if strcmp(method, "GMR")
-        [Y_test_est, ~] = gmr(Priors, Mu, Sigma, X_test, in, out);
+        [Y_test_est, ~] = gmr(Priors, Mu, Sigma, X_test', in, out);
+        Y_test_est=Y_test_est';
     elseif strcmp(method, "GPR")
         Y_test_est = predict(gprMdl, X_test);
     end
