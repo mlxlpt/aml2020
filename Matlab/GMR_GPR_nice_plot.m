@@ -9,7 +9,7 @@ genSparseData = false;
 createGapData = false;
 
 % Selecting the method :
-method = "GMR"; %"GMR","GPR"
+method = "GPR"; %"GMR","GPR"
 %%
 if (strcmp(data_to_load, "shalegas"))
     data = load('../dataset/shalegas_data.csv');
@@ -57,7 +57,7 @@ if createGapData% make gap in data
     [X_train,I]=sort(X_train);
     Y_train= Y_train(I);
     Y_train((10 > X_train) & (X_train > 0)) = [];
-    Y_train((10 > X_train) & (X_train > 0)) = [];
+    X_train((10 > X_train) & (X_train > 0)) = [];
 end
 if genSparseData %generate sparsity
     I = rand(size(X_train,1),1);
@@ -122,11 +122,11 @@ if strcmp(method, "GPR")
         [y_pred,~,y_int] = predict(gprMdl,x_grid');
         figure();
         if(~isempty(X_test))
-            plot1 = plot(X_test,Y_test,'.r' ,'MarkerSize', 18);
+            plot1 = plot(X_test,Y_test,'.','color',[0,0,0]+0.5,'MarkerSize', 18);
             %plot1.Color(1) = 0.75;
             hold on;
         end
-        plot(X_train,Y_train,'.','color',[0,0,0]+0.5 ,'MarkerSize', 18);
+        plot(X_train,Y_train,'.r' ,'MarkerSize', 18);
         hold on;
         plot(x_grid,y_pred,'b','Linewidth',2);
         plot(x_grid, y_int(:,2), '--k','Linewidth',2)
@@ -168,11 +168,11 @@ if strcmp(method, "GMR")
         var_est = squeeze(var_est);
         figure();
         if(~isempty(X_test))
-            plot1 = plot(X_test,Y_test,'r.', 'MarkerSize', 25);
-            plot1.Color(1) = 1.0;
+            plot1 = plot(X_test,Y_test,'.','color', [0, 0, 0]+0.5, 'MarkerSize', 25);
+            %plot1.Color(1) = 1.0;
             hold on;
         end
-        plot(X_train,Y_train,'.','color',[0, 0, 0]+0.5, 'MarkerSize', 25);
+        plot(X_train,Y_train,'.r', 'MarkerSize', 25);
         hold on;
         plot(x_grid, y_pred,'b', 'LineWidth', 2.5);
         plot(x_grid, y_pred+var_est', '--k', 'LineWidth', 2)
