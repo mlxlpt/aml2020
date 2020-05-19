@@ -1,0 +1,39 @@
+function [X_train, Y_train, X_test, Y_test] = split_data(X, Y, validSize)
+%trainTestSplit Split a dataset between train and test data
+
+% Calculate the number of elements
+nbSamples_X = size(X, 2);
+nbSamples_Y = size(Y, 2);
+
+idx = randperm(nbSamples_X);
+idy = randperm(nbSamples_Y);
+X = X(:,idx);
+Y = Y(:,idy);
+
+nbTrainSamples = nbSamples * (1 - validSize);
+nbTestSamples = nbSamples - nbTrainSamples;
+
+% Initialize all returned arrays to empty vectors
+X_train = [];
+Y_train = [];
+X_test = [];
+Y_test = [];
+
+% Split the dataset between train and test set
+for i=1:nbSamples
+   
+    % Add the element in the train set if you have not reached the desired
+    % number of train sample for this class
+    % HINT: consider performing a simple if else test here. Start with the
+    % train set.
+    if currentTrainSamplesPerClass(class) < nbTrainSamplesPerClass(class)
+        X_train = [X_train, X(:,i)];
+        Y_train = [Y_train, Y(:,i)];
+        currentTrainSamplesPerClass(class) = currentTrainSamplesPerClass(class) + 1; 
+    elseif currentTestSamplesPerClass(class) < nbTestSamplesPerClass(class)
+        X_test = [X_test, X(:,i)];
+        Y_test = [Y_test, Y(:,i)];
+        currentTestSamplesPerClass(class) = currentTestSamplesPerClass(class) + 1;
+    end
+end
+

@@ -1,0 +1,39 @@
+N = 30;
+
+CENTER_DATASET = false;
+
+NOISE_VAR = 0.02
+
+x_min = -10;
+x_max = 10;
+
+X = x_min + rand(N,1)*(x_max-x_min);
+X = sort(X);
+
+%X = zeros(N,1);
+Y=X;
+
+f1 = @(x) x+1*sin(x*1);
+f2 = @(x) AMPLITUDE_SINE*sin(x*PULSATION + PHASE);
+f3 = @(x) AMPLITUDE_SINE*sin(x*PULSATION + PHASE);
+
+for i=1:N %j'aurais pu le faire sans boucle...
+    Y(i) = f(X(i))+randn*sqrt(NOISE_VAR);
+end
+
+if CENTER_DATASET
+    X_c = X-mean(X);
+else
+    X_c = X;
+end
+
+X_plot = [X_c(1):0.001:X_c(end)]';
+
+figure();
+plot(X_plot',f(X_plot)');
+hold on;
+scatter(X_c,Y)
+grid on;
+
+data = [X_c,Y,f(X)]; %X, NOISY VALUE, TRUE VALUE
+dlmwrite('noisysine.csv',data,'delimiter',',','precision', 6)

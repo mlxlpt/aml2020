@@ -1,15 +1,23 @@
+%% Initialisation :
 restoredefaultpath();
 addpath(genpath('./utils')); addpath(genpath('./plot_functions'));
 clear all; close all; clc;
-%% Initialisation
-% Loading the data
-data_to_load = "genfct"; %"shalegas" "drawing" "genfct" "kin8nm" <- REAL DATASET
-crossValid = true;
+
+%% Selecting the data to load :
+%genfct : toy dataset
+%drawing : to draw a 2D dataset
+%kin8nm : our real dataset
+data_to_load = "genfct"; 
+
+%% Selecting the method and its hyperparameters :
+method = "GPR"; %"GMR","GPR"
+
+
+%% Selecting the method of analysis :
+crossValid = false;
 genSparseData = false;
 createGapData = false;
 
-% Selecting the method :
-method = "GPR"; %"GMR","GPR"
 %%
 if (strcmp(data_to_load, "shalegas"))
     data = load('../dataset/shalegas_data.csv');
@@ -48,9 +56,9 @@ end
 
 %normalising the data
 %X = (X - mean(X,1))./std(X,1);
-Y = (Y - mean(Y,1));%./std(Y,1);
+%Y = (Y - mean(Y,1));%./std(Y,1);
 
-validSize = 0.5; % test/target ratio (inverse than usual)
+validSize = 0.8; % test/target ratio (inverse than usual)
 [X_train, Y_train, X_test, Y_test] = split_data(X, Y, validSize);
 
 if createGapData% make gap in data
@@ -71,7 +79,7 @@ end
 if (size(X, 2)+size(Y, 2)<=2)
     figure();
     title('Data','FontSize',20);
-    x_grid = [min(X)-1:0.1:max(X)+1];
+    x_grid = [min(X)-6:0.1:max(X)+6];
     scatter(X_train, Y_train, 'black');
     hold on;
     if(~isempty(X_test))
@@ -93,10 +101,13 @@ elseif (size(X, 2)+size(Y, 2)<=3)
     end
 end
 
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% sert � quoi
+
 if strcmp(method, "GMR")
     Xi = [X_train, Y_train]';
     params.cov_type = 'full';
-    params.k = 7;
+    params.k = 10;
     params.max_iter_init = 150;
     params.max_iter = 500;
     params.d_type = 'L2';
@@ -107,15 +118,18 @@ if strcmp(method, "GMR")
     out = N+1:(N+P);
 end
 
+%% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
 % GPR
 if strcmp(method, "GPR")
     %parameters :
     noise_level = 0.1;
     kernel_width = 1;
     kernel_type = 'squaredexponential';
+    beta = ones(2, 1);
 
-    gprMdl = fitrgp(X_train, Y_train,'FitMethod', 'none', 'BasisFunction','none',...
-    'Sigma', noise_level, 'ConstantSigma', true, 'KernelFunction', kernel_type, ...
+    gprMdl = fitrgp(X_train, Y_train,'FitMethod', 'none', 'BasisFunction','linear',...
+    'beta', beta, 'Sigma', noise_level, 'ConstantSigma', true, 'KernelFunction', kernel_type, ...
     'KernelParameters', [kernel_width; 1], 'OptimizeHyperparameters', 'none');
     
     if (size(X, 2)+size(Y, 2)<=2)
@@ -149,7 +163,7 @@ end
 if strcmp(method, "GMR")
     Xi = [X_train, Y_train]';
     params.cov_type = 'full';
-    params.k = 10;
+    params.k = 9;
     params.max_iter_init = 100;
     params.max_iter = 500;
     params.d_type = 'L2';
@@ -225,7 +239,7 @@ elseif strcmp(method, "GPR") && crossValid
 end
 
 %% pour tester la qualité de la prédiction avec un testing set sans faire de
-% cross validation
+%% cross validation
 if(~isempty(X_test)) 
     if strcmp(method, "GMR")
         [Y_test_est, ~] = gmr(Priors, Mu, Sigma, X_test', in, out);

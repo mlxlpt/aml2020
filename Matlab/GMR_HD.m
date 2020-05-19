@@ -1,7 +1,7 @@
 %% %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 clc; clear all; close all;
-restoredefaultpath();
-userpath('clear');
+%restoredefaultpath();
+%userpath('clear');
 
 
 addpath(genpath('../../ML_toolbox'))
@@ -39,7 +39,7 @@ in  = 1:N;       % input dimensions
 out = N+1:(N+P); % output dimensions
 
 
-k_range = [5,8];
+k_range = [2,3,4];
 F_fold = 10;
 valid_ratio = 0.5;
 
