@@ -28,7 +28,7 @@ function [metrics] = cross_validation_gpr( X, y, F_fold, valid_ratio, params, pl
 
 [N,M] = size(X);
 [P,M] = size(y);
-metrics.mean_MSE = zeros(1, length(params.kernel_width));
+metrics.mean_MSE = zeros(length(params.noise_level), length(params.kernel_width));
 metrics.mean_NMSE = metrics.mean_MSE;
 metrics.mean_R2 = metrics.mean_MSE;
 metrics.std_MSE = metrics.mean_MSE;
@@ -40,19 +40,21 @@ sd_folds = zeros(4, F_fold);
 
 kernel_type = params.kernel_type;
 noise_level = params.noise_level;
-
-k=1;
-if params.noiseCV == false
-    k_range = params.kernel_width;
-
+vect = [];
+r2vect = [];
+e=1;
+k_range = params.kernel_width;
+for nse = params.noise_level
+    fprintf('\n\nnoise %.3f', nse);
+    k=1;
     for kernel_wdth=k_range
         fprintf('\nCV kwidth = %.3f: ', kernel_wdth);
-
+        vect = [vect;[nse,kernel_wdth]];
         for f=1:F_fold
             [X_train, Y_train, X_test, y_test] = split_regression_data(X,y,valid_ratio);
 
             gprMdl = fitrgp(X_train', Y_train','FitMethod', 'none', 'BasisFunction','none',...
-            'Sigma', noise_level, 'ConstantSigma', true, 'KernelFunction', kernel_type, ...
+            'Sigma', nse, 'ConstantSigma', true, 'KernelFunction', kernel_type, ...
             'KernelParameters', [kernel_wdth; 1], 'OptimizeHyperparameters', 'none');
             [y_pred,~,~] = predict(gprMdl,X_test');
             [sd_folds(1,f), sd_folds(2,f), sd_folds(3,f)] = regression_metrics(y_pred', y_test);
@@ -62,16 +64,20 @@ if params.noiseCV == false
         K_sig = kfcn(X_train',X_train') + eye(size(X_train,2));
         sd_folds(4,1) = 0.5*(Y_train*inv(K_sig)*Y_train'+log(det(K_sig)));
 
-        metrics.mean_MSE(k) = mean(sd_folds(1,:));
-        metrics.mean_NMSE(k) = mean(sd_folds(2,:));
-        metrics.mean_R2(k) = mean(sd_folds(3,:));
-        metrics.std_MSE(k) = std(sd_folds(1,:));
-        metrics.std_NMSE(k) = std(sd_folds(2,:));
-        metrics.std_R2(k) = std(sd_folds(3,:));
-        metrics.loglik(k) = sd_folds(4,1);
-
+        metrics.mean_MSE(e,k) = mean(sd_folds(1,:));
+        metrics.mean_NMSE(e,k) = mean(sd_folds(2,:));
+        metrics.mean_R2(e,k) = mean(sd_folds(3,:));
+        metrics.std_MSE(e,k) = std(sd_folds(1,:));
+        metrics.std_NMSE(e,k) = std(sd_folds(2,:));
+        metrics.std_R2(e,k) = std(sd_folds(3,:));
+        metrics.loglik(e,k) = sd_folds(4,1);
+        r2vect = [r2vect;metrics.mean_R2(e,k)];
         k = k + 1;
     end
+    e=e+1;
+end
+
+if length(params.noise_level) == 1
     fprintf('\n');
     f = figure();
     if plotLogLik
@@ -111,61 +117,28 @@ if params.noiseCV == false
     grid on;
     title('GPR Regression Metrics','FontSize',20);
 else
-    if length(params.kernel_width) > 1
-        error("Too many kernel width given, expected one but got more");
-        return;
-    end
-    kernel_wdth = params.kernel_width;
-    for noise=params.noise_level
-        fprintf('\nCV noise = %.4f: ', noise);
+    kmin = min(params.kernel_width);
+    kmax = max(params.kernel_width);
+    kgrid = [kmin:0.01:kmax]';
 
-        for f=1:F_fold
-            [X_train, Y_train, X_test, y_test] = split_regression_data(X,y,valid_ratio);
+    emin = min(params.noise_level);
+    emax = max(params.noise_level);
+    egrid = [emin:0.01:emax]';
+    F = scatteredInterpolant(vect,r2vect);
 
-            gprMdl = fitrgp(X_train', Y_train','FitMethod', 'none', 'BasisFunction','none',...
-            'Sigma', noise, 'ConstantSigma', true, 'KernelFunction', kernel_type, ...
-            'KernelParameters', [kernel_wdth; 1], 'OptimizeHyperparameters', 'none');
-            [y_pred,~,~] = predict(gprMdl,X_test');
-            [sd_folds(1,f), sd_folds(2,f), sd_folds(3,f)] = regression_metrics(y_pred', y_test);
-
-            fprintf('.');
-        end
-        metrics.mean_MSE(k) = mean(sd_folds(1,:));
-        metrics.mean_NMSE(k) = mean(sd_folds(2,:));
-        metrics.mean_R2(k) = mean(sd_folds(3,:));
-        metrics.mean_AIC(k) = NaN; % on met NaN comme ça le plot AIC BIC reste vide (n'existe pas pour GMR/GPR)
-        metrics.mean_BIC(k) = NaN;
-        metrics.std_MSE(k) = std(sd_folds(1,:));
-        metrics.std_NMSE(k) = std(sd_folds(2,:));
-        metrics.std_R2(k) = std(sd_folds(3,:));
-        metrics.std_AIC(k) = NaN;
-        metrics.std_BIC(k) = NaN;
-        metrics.loglik(k) = mean(sd_folds(4,:));
-
-        k = k + 1;
-    end
-    fprintf('\n');
-    f = figure();
-    
-    [ax,hline1,hline2]=plotyy(params.noise_level',metrics.mean_MSE',...
-        [params.noise_level' params.noise_level'],[metrics.mean_NMSE' metrics.mean_R2']);
-    delete(hline1);
-    delete(hline2);
-    hold(ax(1),'on');
-    errorbar(ax(1),params.noise_level', metrics.mean_MSE', metrics.std_MSE','--o','LineWidth',2,'Color', [0 0.447 0.741]);
-    hold(ax(2),'on');
-    errorbar(ax(2),params.noise_level',metrics.mean_NMSE', metrics.std_NMSE','--or','LineWidth',2);
-    errorbar(ax(2),params.noise_level',metrics.mean_R2', metrics.std_R2','--og','LineWidth',2);
-    if(params.useLogScale)
-        set(ax,'XScale','log');
-        xlabel('Noise, log scale');
-    else
-        xlabel('Noise');
-    end
-    ylabel('Measures');
-    legend('MSE', 'NMSE', '$R^2$','Interpreter','latex','FontSize',19);
-    grid on;
-    title('GPR Regression Metrics');
+    [xGrid, yGrid] = meshgrid(egrid, kgrid);
+    xq = xGrid(:);
+    yq = yGrid(:);
+    vq = F(xq, yq);
+    fittedImage = reshape(vq,  length(kgrid),length(egrid));
+    figure;
+    imagesc(fittedImage, 'XData',kgrid,'YData',egrid);
+    title('$R^2$ evolution with $l$ and $\sigma_e$', 'Interpreter', 'latex', 'FontSize',20);
+    xlabel('Kernel width $l$ ', 'FontSize',18, 'Interpreter', 'latex');
+    ylabel('Noise $\sigma_e$', 'FontSize',18, 'Interpreter', 'latex');
+    hold on;
+    colormap;
+    colorbar;
+    hold off;
 end
-
 end

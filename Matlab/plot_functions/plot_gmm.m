@@ -4,7 +4,8 @@ function [] = plot_gmm(X, Priors, Mu, Sigma, params, title)
 options.labels      = [];
 options.class_names = [];
 options.title       = title;
-ml_plot_data(X',options);hold on;
+%ml_plot_data(X',options);
+hold on;
 colors     = hsv(params.k);
 ml_plot_centroid(Mu',colors);hold on;
 plot_gmm_contour(gca,Priors,Mu,Sigma,colors);
