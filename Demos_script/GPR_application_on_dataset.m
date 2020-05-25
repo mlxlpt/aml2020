@@ -15,16 +15,18 @@ Xi = [X  y]';
 [P,M] = size(y);
 
 %% run cross validation GPR
-paramsM.noise_level = [0.005, 0.01, 0.1, 0.2, 0.35, 0.5];
+paramsM.noise_level = [0.0075, 0.01, 0.05, 0.1, 0.2, 0.35, 0.5];
 paramsM.kernel_width = [0.75, 1.0, 1.25, 1.5, 1.75, 2.0, 2.25, 2.5];
 paramsM.kernel_type = 'squaredexponential';
 paramsM.useLogScale = false; %Sometime we evaluate kernel chosen with log law
 
 optimizeParameterWithMatlab = false; % USE MATLAB OPTIMIZER?
 paramsM.plotMSEcolorMap = false; 
+paramsM.plotR2Var = true;
 
 F_fold    = 10;     % # of Folds for cv
 valid_ratio  = 0.5;    % train/test ratio
+
 optimMaxIter = F_fold * length(paramsM.noise_level) * length(paramsM.kernel_width);
 if (optimMaxIter > 200)
     optimMaxIter = 200;
@@ -64,16 +66,18 @@ function [metrics] = cross_validation_gpr( X, y, F_fold, valid_ratio, params)
     paramPair = [];
     r2vect = [];
     msevect = [];
+    r2var = [];
+    
     e=1;
     k_range = params.kernel_width;
     
     % loop over noise
     for nse = params.noise_level
-        fprintf('\n\nNoise %.3f', nse);
+        fprintf('\n\nNoise %.4f', nse);
         k=1;
         % loop over widths
         for kernel_wdth=k_range
-            fprintf('\nCV kwidth = %.3f: ', kernel_wdth);
+            fprintf('\nCV kwidth = %.4f: ', kernel_wdth);
             paramPair = [paramPair;[nse,kernel_wdth]];
             %F-folds
             for f=1:F_fold
@@ -95,6 +99,7 @@ function [metrics] = cross_validation_gpr( X, y, F_fold, valid_ratio, params)
             metrics.std_R2(e,k) = std(sd_folds(3,:));
             r2vect = [r2vect;metrics.mean_R2(e,k)];
             msevect = [msevect;metrics.mean_MSE(e,k)];
+            r2var = [r2var;metrics.std_R2(e,k)];
             k = k + 1;
         end
         e = e + 1;
@@ -161,6 +166,21 @@ function [metrics] = cross_validation_gpr( X, y, F_fold, valid_ratio, params)
             imagesc(fittedImage, 'XData',kgrid,'YData',egrid);
             hold on;
             title('MSE evolution with $l$ and $\sigma_e$', 'Interpreter', 'latex', 'FontSize',20);
+            xlabel('Kernel width $l$ ', 'FontSize',18, 'Interpreter', 'latex');
+            ylabel('Noise $\sigma_e$', 'FontSize',18, 'Interpreter', 'latex');
+            colormap(c);
+            colorbar;
+            hold off;
+        end
+        if params.plotR2Var == true
+            F = scatteredInterpolant(paramPair,r2var);
+            vq = F(xq, yq);
+            fittedImage = reshape(vq,  length(kgrid),length(egrid));
+            c = hot;
+            figure;
+            imagesc(fittedImage, 'XData',kgrid,'YData',egrid);
+            hold on;
+            title('std($R^2$) with $l$ and $\sigma_e$', 'Interpreter', 'latex', 'FontSize',20);
             xlabel('Kernel width $l$ ', 'FontSize',18, 'Interpreter', 'latex');
             ylabel('Noise $\sigma_e$', 'FontSize',18, 'Interpreter', 'latex');
             colormap(c);
